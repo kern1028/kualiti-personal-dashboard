@@ -1,4 +1,4 @@
-﻿name: kualiti
+name: kualiti
 description: "Kualiti - Your Cozy Personal Dashboard"
 publish_to: 'none'
 version: 1.0.0+1
@@ -19,7 +19,7 @@ dependencies:
   url_launcher: any
   flutter_local_notifications: any
   timezone: any
-  flutter_timezone: any
+  flutter_timezone: ^5.1.1
   flutter_foreground_task: any
   http: any
   package_info_plus: any
