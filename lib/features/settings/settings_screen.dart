@@ -1,10 +1,17 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/l10n/app_localizations.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/theme/theme_tokens.dart';
 import '../../core/db/user_provider.dart';
 import '../../core/utils/date_time_formatter.dart';
+import '../backup/backup_provider.dart';
+import '../tasks/providers/task_provider.dart';
+import '../links/providers/link_provider.dart';
+import '../notes/providers/note_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -15,18 +22,169 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _nameController;
+  bool _soundEnabled = true;
 
   @override
   void initState() {
     super.initState();
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     _nameController = TextEditingController(text: userProvider.userName);
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _soundEnabled = prefs.getBool('sound_enabled') ?? true;
+    });
+  }
+
+  Future<void> _toggleSound(bool val) async {
+    setState(() {
+      _soundEnabled = val;
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('sound_enabled', val);
   }
 
   @override
   void dispose() {
     _nameController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleExportBackup(BuildContext context, ThemeTokens tokens, AppLocalizations l10n) async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final provider = LocalFileBackupProvider();
+    final jsonContent = await provider.exportBackupData(userProvider.userName);
+    final fileName = LocalFileBackupProvider.sanitizeFileName(userProvider.userName);
+
+    if (!context.mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: tokens.surface,
+        title: Text('Ekspor Cadangan ($fileName)'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('File cadangan siap disimpan:', style: TextStyle(color: tokens.ink)),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: tokens.bg,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                fileName,
+                style: TextStyle(fontFamily: tokens.fontTitle, fontWeight: FontWeight.bold, color: tokens.accent),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.ok),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleImportBackup(BuildContext context, ThemeTokens tokens, AppLocalizations l10n) async {
+    final importController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: tokens.surface,
+        title: Text(l10n.importBackup),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Tempel teks JSON cadangan (kualiti...backup.json):', style: TextStyle(color: tokens.ink, fontSize: 13)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: importController,
+              maxLines: 6,
+              style: TextStyle(fontFamily: tokens.fontBody, fontSize: 12, color: tokens.ink),
+              decoration: const InputDecoration(
+                hintText: '{"app": "kualiti", ...}',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.cancel),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: tokens.accent, foregroundColor: tokens.onAccent),
+            onPressed: () async {
+              final jsonStr = importController.text.trim();
+              Navigator.pop(ctx);
+              if (jsonStr.isEmpty) return;
+
+              final provider = LocalFileBackupProvider();
+              final backupMap = await provider.readBackupData(jsonStr);
+
+              if (backupMap == null) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: const Text('Format file cadangan tidak valid!'), backgroundColor: tokens.priorityHigh),
+                  );
+                }
+                return;
+              }
+
+              // Confirm restore dialog
+              if (context.mounted) {
+                showDialog(
+                  context: context,
+                  builder: (confirmCtx) => AlertDialog(
+                    backgroundColor: tokens.surface,
+                    title: const Text('Konfirmasi Impor Data'),
+                    content: Text(
+                      'Data lokal saat ini akan ditimpa dengan cadangan dari tanggal ${backupMap["createdAt"] ?? "tidak diketahui"}.\n\nLanjutkan?',
+                    ),
+                    actions: [
+                      TextButton(onPressed: () => Navigator.pop(confirmCtx), child: Text(l10n.cancel)),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: tokens.priorityHigh, foregroundColor: Colors.white),
+                        onPressed: () async {
+                          Navigator.pop(confirmCtx);
+                          final success = await provider.restoreBackupData(backupMap);
+                          if (success && context.mounted) {
+                            // Reload all providers
+                            Provider.of<TaskProvider>(context, listen: false).loadTasks();
+                            Provider.of<LinkProvider>(context, listen: false).loadLinks();
+                            Provider.of<NoteProvider>(context, listen: false).loadNotes();
+                            Provider.of<UserProvider>(context, listen: false);
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(l10n.saved)),
+                            );
+                          }
+                        },
+                        child: const Text('Impor & Timpa'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+            },
+            child: Text(l10n.importBackup),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -65,6 +223,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onChanged: (val) {
                 userProvider.setUserName(val);
               },
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Section: Sound & Notifications
+          _buildSectionHeader('Notifikasi & Suara', tokens),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              color: tokens.surface,
+              borderRadius: BorderRadius.circular(tokens.radius),
+              border: Border.all(color: tokens.line, width: tokens.borderWidth),
+            ),
+            child: SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                l10n.mp3Sound,
+                style: TextStyle(fontFamily: tokens.fontBody, fontSize: 14, color: tokens.ink),
+              ),
+              subtitle: Text(
+                l10n.vibrateHint,
+                style: TextStyle(fontFamily: tokens.fontBody, fontSize: 11, color: tokens.inkMuted),
+              ),
+              activeColor: tokens.accent,
+              value: _soundEnabled,
+              onChanged: _toggleSound,
             ),
           ),
           const SizedBox(height: 20),
@@ -202,10 +386,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 20),
 
-          // Google Drive Button (Dialog "Segera hadir" per PRD)
+          // Section: Data Backup
           _buildSectionHeader(l10n.dataBackup, tokens),
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: tokens.surface,
               borderRadius: BorderRadius.circular(tokens.radius),
@@ -214,47 +398,72 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               children: [
                 ListTile(
-                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.download_rounded, color: tokens.accent),
+                  title: Text(l10n.exportDevice, style: TextStyle(color: tokens.ink, fontSize: 14)),
+                  onTap: () => _handleExportBackup(context, tokens, l10n),
+                ),
+                const Divider(),
+                ListTile(
+                  leading: Icon(Icons.upload_rounded, color: tokens.accent),
+                  title: Text(l10n.importBackup, style: TextStyle(color: tokens.ink, fontSize: 14)),
+                  onTap: () => _handleImportBackup(context, tokens, l10n),
+                ),
+                const Divider(),
+                ListTile(
                   leading: Icon(Icons.cloud_outlined, color: tokens.accent),
-                  title: Text(
-                    l10n.googleDriveBackup,
-                    style: TextStyle(
-                      fontFamily: tokens.fontBody,
-                      fontSize: 14,
-                      color: tokens.ink,
-                    ),
-                  ),
+                  title: Text(l10n.googleDriveBackup, style: TextStyle(color: tokens.ink, fontSize: 14)),
                   onTap: () {
                     showDialog(
                       context: context,
                       builder: (ctx) => AlertDialog(
                         backgroundColor: tokens.surface,
-                        title: Text(
-                          l10n.googleDriveBackup,
-                          style: TextStyle(
-                            fontFamily: tokens.fontTitle,
-                            color: tokens.ink,
-                          ),
-                        ),
-                        content: Text(
-                          l10n.comingSoon,
-                          style: TextStyle(
-                            fontFamily: tokens.fontBody,
-                            color: tokens.inkMuted,
-                          ),
-                        ),
+                        title: Text(l10n.googleDriveBackup),
+                        content: Text(l10n.comingSoon),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(ctx),
-                            child: Text(
-                              l10n.ok,
-                              style: TextStyle(color: tokens.accent),
-                            ),
+                            child: Text(l10n.ok, style: TextStyle(color: tokens.accent)),
                           ),
                         ],
                       ),
                     );
                   },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Section: About App
+          _buildSectionHeader('Tentang Aplikasi', tokens),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: tokens.surface,
+              borderRadius: BorderRadius.circular(tokens.radius),
+              border: Border.all(color: tokens.line, width: tokens.borderWidth),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Kualiti v1.0.0', style: TextStyle(fontFamily: tokens.fontTitle, fontWeight: FontWeight.bold, color: tokens.ink)),
+                const SizedBox(height: 4),
+                Text('Your Cozy Personal Dashboard', style: TextStyle(color: tokens.inkMuted, fontSize: 12)),
+                const SizedBox(height: 12),
+                InkWell(
+                  onTap: () {
+                    launchUrl(Uri.parse('https://github.com/kern1028/kualiti-personal-dashboard'), mode: LaunchMode.externalApplication);
+                  },
+                  child: Row(
+                    children: [
+                      Icon(Icons.code_rounded, size: 16, color: tokens.accent),
+                      const SizedBox(width: 6),
+                      Text(
+                        'GitHub: kern1028/kualiti-personal-dashboard',
+                        style: TextStyle(color: tokens.accent, fontSize: 12, decoration: TextDecoration.underline),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
