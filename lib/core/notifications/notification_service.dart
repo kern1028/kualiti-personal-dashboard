@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
@@ -43,42 +44,51 @@ class NotificationService {
       },
     );
 
-    await _createNotificationChannels();
-    _initialized = true;
+    try {
+      await _createNotificationChannels();
+      _initialized = true;
+    } catch (e) {
+      debugPrint('Notification channel creation warning: $e');
+      _initialized = true;
+    }
   }
 
   Future<void> _createNotificationChannels() async {
     if (!Platform.isAndroid) return;
 
-    final androidImplementation =
-        _notificationsPlugin.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+    try {
+      final androidImplementation =
+          _notificationsPlugin.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
 
-    if (androidImplementation != null) {
-      // Sound channel (MP3 + Vibrate)
-      const AndroidNotificationChannel soundChannel = AndroidNotificationChannel(
-        channelSoundId,
-        'Kualiti Sound Reminders',
-        description: 'Notifications with custom cozy sound and vibration',
-        importance: Importance.high,
-        sound: RawResourceAndroidNotificationSound(
-          AssetConstants.notificationSoundResource,
-        ),
-        enableVibration: true,
-      );
+      if (androidImplementation != null) {
+        // Sound channel (MP3 + Vibrate)
+        const AndroidNotificationChannel soundChannel = AndroidNotificationChannel(
+          channelSoundId,
+          'Kualiti Sound Reminders',
+          description: 'Notifications with custom cozy sound and vibration',
+          importance: Importance.high,
+          sound: RawResourceAndroidNotificationSound(
+            AssetConstants.notificationSoundResource,
+          ),
+          enableVibration: true,
+        );
 
-      // Silent channel (Vibrate only)
-      const AndroidNotificationChannel silentChannel = AndroidNotificationChannel(
-        channelSilentId,
-        'Kualiti Silent Reminders',
-        description: 'Notifications with vibration only',
-        importance: Importance.high,
-        playSound: false,
-        enableVibration: true,
-      );
+        // Silent channel (Vibrate only)
+        const AndroidNotificationChannel silentChannel = AndroidNotificationChannel(
+          channelSilentId,
+          'Kualiti Silent Reminders',
+          description: 'Notifications with vibration only',
+          importance: Importance.high,
+          playSound: false,
+          enableVibration: true,
+        );
 
-      await androidImplementation.createNotificationChannel(soundChannel);
-      await androidImplementation.createNotificationChannel(silentChannel);
+        await androidImplementation.createNotificationChannel(soundChannel);
+        await androidImplementation.createNotificationChannel(silentChannel);
+      }
+    } catch (e) {
+      debugPrint('Failed to create notification channels: $e');
     }
   }
 

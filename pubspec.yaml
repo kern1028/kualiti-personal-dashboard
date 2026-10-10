@@ -35,3 +35,5 @@ flutter:
   assets:
     - assets/images/kualiti_logo.jpg
     - assets/audio/kualiti_notification.mp3
+    - assets/l10n/app_id.arb
+    - assets/l10n/app_en.arb
