@@ -21,6 +21,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.29.0'
           channel: 'stable'
 
       - name: Make Gradlew Executable
@@ -30,7 +31,7 @@ jobs:
         run: flutter pub get
 
       - name: Build Release APK
-        run: flutter build apk --release --no-tree-shake-icons --android-skip-build-dependency-validation
+        run: flutter build apk --release --no-tree-shake-icons
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4

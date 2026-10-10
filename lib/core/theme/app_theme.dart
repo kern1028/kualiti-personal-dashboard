@@ -71,7 +71,7 @@ class AppTheme {
           fontFamily: tokens.fontTitle,
         ),
       ),
-      cardTheme: CardThemeData(
+      cardTheme: CardTheme(
         color: tokens.surface,
         elevation: tokens.isPixel ? 0 : 0,
         margin: EdgeInsets.zero,
