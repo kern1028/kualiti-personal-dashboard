@@ -6,8 +6,9 @@ import '../../core/theme/theme_tokens.dart';
 import '../../core/db/user_provider.dart';
 import '../../core/utils/date_time_formatter.dart';
 import '../tasks/providers/task_provider.dart';
-import '../tasks/models/task_model.dart';
-import '../tasks/widgets/task_form_sheet.dart';
+import '../links/providers/link_provider.dart';
+import '../links/widgets/link_tile.dart';
+import '../links/widgets/link_form_sheet.dart';
 
 class DashboardScreen extends StatelessWidget {
   final Function(int) onNavigateTab;
@@ -86,8 +87,8 @@ class DashboardScreen extends StatelessWidget {
               _buildMenuGrid(tokens, l10n),
               const SizedBox(height: 18),
 
-              // 4. Quick Links row (Up to 4 icons)
-              _buildQuickLinksRow(tokens, l10n),
+              // 4. Quick Links row (Up to 4 icons + Add button)
+              _buildQuickLinksRow(context, tokens, l10n),
             ],
           ),
         ),
@@ -136,7 +137,7 @@ class DashboardScreen extends StatelessWidget {
                 ),
               ),
               GestureDetector(
-                onTap: () => onNavigateTab(1), // Open Tasks tab
+                onTap: () => onNavigateTab(1),
                 child: Text(
                   '$count ${l10n.tasksRemaining}',
                   style: TextStyle(
@@ -297,38 +298,80 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildQuickLinksRow(ThemeTokens tokens, AppLocalizations l10n) {
+  Widget _buildQuickLinksRow(
+    BuildContext context,
+    ThemeTokens tokens,
+    AppLocalizations l10n,
+  ) {
+    final linkProvider = Provider.of<LinkProvider>(context);
+    final homeLinks = linkProvider.homeLinks;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          l10n.quickLinks,
-          style: TextStyle(
-            fontFamily: tokens.fontTitle,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: tokens.ink,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              l10n.quickLinks,
+              style: TextStyle(
+                fontFamily: tokens.fontTitle,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: tokens.ink,
+              ),
+            ),
+            GestureDetector(
+              onTap: () => onNavigateTab(4),
+              child: Text(
+                'Lihat semua',
+                style: TextStyle(
+                  fontFamily: tokens.fontBody,
+                  fontSize: 12,
+                  color: tokens.accent,
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 10),
         Row(
           children: [
-            GestureDetector(
-              onTap: () => onNavigateTab(4),
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: tokens.surface,
-                  borderRadius: BorderRadius.circular(tokens.radius),
-                  border: Border.all(
-                    color: tokens.line,
-                    width: tokens.borderWidth,
+            ...homeLinks.map((link) => Padding(
+                  padding: const EdgeInsets.only(right: 12.0),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(tokens.radius),
+                    onTap: () => linkProvider.launchLink(link.url),
+                    child: Tooltip(
+                      message: link.name,
+                      child: LinkTile.buildIconWidget(link, tokens, size: 44),
+                    ),
                   ),
+                )),
+            if (homeLinks.length < 4)
+              GestureDetector(
+                onTap: () {
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (_) => const LinkFormSheet(),
+                  );
+                },
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: tokens.surface,
+                    borderRadius: BorderRadius.circular(tokens.radius),
+                    border: Border.all(
+                      color: tokens.line,
+                      width: tokens.borderWidth,
+                    ),
+                  ),
+                  child: Icon(Icons.add, color: tokens.inkMuted, size: 20),
                 ),
-                child: Icon(Icons.add, color: tokens.inkMuted, size: 20),
               ),
-            ),
           ],
         ),
       ],
