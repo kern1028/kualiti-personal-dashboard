@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/l10n/app_localizations.dart';
 import '../../core/theme/app_theme.dart';
@@ -18,28 +18,44 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final TextEditingController _nameController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      if (userProvider.userName.isNotEmpty) {
+        _nameController.text = userProvider.userName;
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     super.dispose();
   }
 
-  void _nextStep() {
-    if (_step == 0 && _nameController.text.trim().isEmpty) {
-      return;
+  void _nextStep() async {
+    if (_step == 0) {
+      final name = _nameController.text.trim();
+      if (name.isEmpty) return;
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      await userProvider.setUserName(name);
     }
     if (_step < 2) {
       setState(() {
         _step++;
       });
     } else {
-      _finishOnboarding();
+      await _finishOnboarding();
     }
   }
 
-  void _finishOnboarding() {
+  Future<void> _finishOnboarding() async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    userProvider.completeOnboarding(_nameController.text.trim());
+    await userProvider.completeOnboarding(_nameController.text.trim());
 
+    if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const MainNavigationShell()),
     );

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import '../core/l10n/app_localizations.dart';
@@ -11,7 +11,9 @@ import '../features/notes/providers/note_provider.dart';
 import '../features/timer/providers/timer_provider.dart';
 
 class KualitiApp extends StatelessWidget {
-  const KualitiApp({super.key});
+  final UserProvider? userProvider;
+
+  const KualitiApp({super.key, this.userProvider});
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +21,9 @@ class KualitiApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
-        ChangeNotifierProvider(create: (_) => UserProvider()),
+        userProvider != null
+            ? ChangeNotifierProvider.value(value: userProvider!)
+            : ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => TaskProvider()),
         ChangeNotifierProvider(create: (_) => LinkProvider()),
         ChangeNotifierProvider(create: (_) => NoteProvider()),

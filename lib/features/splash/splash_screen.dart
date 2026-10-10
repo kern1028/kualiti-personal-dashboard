@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/asset_constants.dart';
@@ -68,7 +68,13 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted) return;
 
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final targetScreen = userProvider.isOnboardingComplete
+    while (!userProvider.isLoaded) {
+      await Future.delayed(const Duration(milliseconds: 50));
+      if (!mounted) return;
+    }
+
+    final bool isUserSetup = userProvider.isOnboardingComplete || userProvider.userName.trim().isNotEmpty;
+    final targetScreen = isUserSetup
         ? const MainNavigationShell()
         : const OnboardingScreen();
 
@@ -120,7 +126,7 @@ class _SplashScreenState extends State<SplashScreen>
                       clipBehavior: Clip.antiAlias,
                       child: Image.asset(
                         AssetConstants.logoImage,
-                        fit: BoxFit.cover,
+                        fit: BoxFit.contain,
                         errorBuilder: (context, error, stackTrace) => Icon(
                           Icons.dashboard_customize_rounded,
                           size: 48,

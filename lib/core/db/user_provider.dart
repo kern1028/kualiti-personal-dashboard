@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class UserProvider extends ChangeNotifier {
@@ -14,22 +14,28 @@ class UserProvider extends ChangeNotifier {
   bool get isLoaded => _isLoaded;
 
   UserProvider() {
-    _loadUser();
+    init();
   }
 
-  Future<void> _loadUser() async {
+  Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     _userName = prefs.getString(_userNameKey) ?? '';
-    _isOnboardingComplete = prefs.getBool(_onboardingCompleteKey) ?? false;
+    _isOnboardingComplete = (prefs.getBool(_onboardingCompleteKey) ?? false) || _userName.isNotEmpty;
     _isLoaded = true;
     notifyListeners();
   }
 
   Future<void> setUserName(String name) async {
     _userName = name.trim();
+    if (_userName.isNotEmpty) {
+      _isOnboardingComplete = true;
+    }
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_userNameKey, _userName);
+    if (_userName.isNotEmpty) {
+      await prefs.setBool(_onboardingCompleteKey, true);
+    }
   }
 
   Future<void> completeOnboarding(String name) async {

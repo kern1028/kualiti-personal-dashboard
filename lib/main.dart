@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'app/app.dart';
 import 'core/db/app_database.dart';
+import 'core/db/user_provider.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/utils/date_time_formatter.dart';
 
@@ -41,5 +42,13 @@ void main() async {
     debugPrint('NotificationService init error: $e');
   }
 
-  runApp(const KualitiApp());
+  // Pre-initialize UserProvider to ensure user name and onboarding state are ready
+  final userProvider = UserProvider();
+  try {
+    await userProvider.init();
+  } catch (e) {
+    debugPrint('UserProvider init error: $e');
+  }
+
+  runApp(KualitiApp(userProvider: userProvider));
 }
