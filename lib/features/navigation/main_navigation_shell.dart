@@ -5,6 +5,7 @@ import '../../core/theme/theme_tokens.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../settings/settings_screen.dart';
 import '../tasks/screens/tasks_screen.dart';
+import '../notes/screens/notes_screen.dart';
 import '../links/screens/links_screen.dart';
 
 class MainNavigationShell extends StatefulWidget {
@@ -41,7 +42,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
       ),
       const TasksScreen(),
       _buildPlaceholderTab(l10n.navTimer, Icons.timer_outlined, tokens, l10n),
-      _buildPlaceholderTab(l10n.navNotes, Icons.notes_rounded, tokens, l10n),
+      const NotesScreen(),
       const LinksScreen(),
     ];
 
