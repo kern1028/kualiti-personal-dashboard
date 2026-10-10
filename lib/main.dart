@@ -2,6 +2,7 @@
 import 'package:flutter/services.dart';
 import 'app/app.dart';
 import 'core/db/app_database.dart';
+import 'core/notifications/notification_service.dart';
 import 'core/utils/date_time_formatter.dart';
 
 void main() async {
@@ -20,6 +21,9 @@ void main() async {
 
   // Initialize SQLite database instance
   await AppDatabase.instance.database;
+
+  // Initialize Notification Service
+  await NotificationService.instance.init();
 
   runApp(const KualitiApp());
 }

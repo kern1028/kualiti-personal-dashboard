@@ -5,6 +5,9 @@ import '../../core/theme/app_theme.dart';
 import '../../core/theme/theme_tokens.dart';
 import '../../core/db/user_provider.dart';
 import '../../core/utils/date_time_formatter.dart';
+import '../tasks/providers/task_provider.dart';
+import '../tasks/models/task_model.dart';
+import '../tasks/widgets/task_form_sheet.dart';
 
 class DashboardScreen extends StatelessWidget {
   final Function(int) onNavigateTab;
@@ -79,14 +82,11 @@ class DashboardScreen extends StatelessWidget {
               _buildTodayTasksCard(context, tokens, l10n),
               const SizedBox(height: 14),
 
-              // 3. Active Timer Card (shown only if timer is running - empty in Stage 1)
-              // (Will integrate dynamically in Stage 5)
-
-              // 4. Four Menu Cards: Notes, Tasks, Timer, Links
+              // 3. Four Menu Cards: Notes, Tasks, Timer, Links
               _buildMenuGrid(tokens, l10n),
               const SizedBox(height: 18),
 
-              // 5. Quick Links row (Up to 4 icons)
+              // 4. Quick Links row (Up to 4 icons)
               _buildQuickLinksRow(tokens, l10n),
             ],
           ),
@@ -100,6 +100,11 @@ class DashboardScreen extends StatelessWidget {
     ThemeTokens tokens,
     AppLocalizations l10n,
   ) {
+    final taskProvider = Provider.of<TaskProvider>(context);
+    final count = taskProvider.todayUncompletedCount;
+    final closest = taskProvider.closestUpcomingTask;
+    final localeCode = Localizations.localeOf(context).languageCode;
+
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
@@ -130,25 +135,104 @@ class DashboardScreen extends StatelessWidget {
                   color: tokens.ink,
                 ),
               ),
-              Text(
-                '0 ${l10n.tasksRemaining}',
-                style: TextStyle(
-                  fontFamily: tokens.fontBody,
-                  fontSize: 12,
-                  color: tokens.inkMuted,
+              GestureDetector(
+                onTap: () => onNavigateTab(1), // Open Tasks tab
+                child: Text(
+                  '$count ${l10n.tasksRemaining}',
+                  style: TextStyle(
+                    fontFamily: tokens.fontBody,
+                    fontSize: 12,
+                    color: tokens.accent,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          Text(
-            l10n.emptyState,
-            style: TextStyle(
-              fontFamily: tokens.fontBody,
-              fontSize: 13,
-              color: tokens.inkMuted,
+          if (closest == null)
+            Text(
+              l10n.emptyState,
+              style: TextStyle(
+                fontFamily: tokens.fontBody,
+                fontSize: 13,
+                color: tokens.inkMuted,
+              ),
+            )
+          else
+            GestureDetector(
+              onTap: () => onNavigateTab(1),
+              child: Row(
+                children: [
+                  Container(
+                    width: 6,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: closest.priority == 3
+                          ? tokens.priorityHigh
+                          : (closest.priority == 1 ? tokens.priorityLow : tokens.priorityMid),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          closest.title,
+                          style: TextStyle(
+                            fontFamily: tokens.fontBody,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: tokens.ink,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Row(
+                          children: [
+                            if (closest.isOverdue) ...[
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 1,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: tokens.priorityHigh.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  '${l10n.overdue} (${closest.getRelativeOverdueText(l10n, localeCode)})',
+                                  style: TextStyle(
+                                    fontFamily: tokens.fontBody,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: tokens.priorityHigh,
+                                  ),
+                                ),
+                              ),
+                            ] else ...[
+                              Text(
+                                '${l10n.upNext}: ${DateTimeFormatter.formatDate(closest.fullDueDateTime)}' +
+                                    (closest.hasTime && closest.dueTime != null
+                                        ? ' ${closest.dueTime}'
+                                        : ''),
+                                style: TextStyle(
+                                  fontFamily: tokens.fontBody,
+                                  fontSize: 12,
+                                  color: tokens.inkMuted,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -156,10 +240,10 @@ class DashboardScreen extends StatelessWidget {
 
   Widget _buildMenuGrid(ThemeTokens tokens, AppLocalizations l10n) {
     final menuItems = [
-      (0, l10n.navNotes, Icons.notes_rounded, 3), // Tab 3: Notes
-      (1, l10n.navTasks, Icons.check_circle_outline_rounded, 1), // Tab 1: Tasks
-      (2, l10n.navTimer, Icons.timer_outlined, 2), // Tab 2: Timer
-      (3, l10n.navLinks, Icons.link_rounded, 4), // Tab 4: Links
+      (0, l10n.navNotes, Icons.notes_rounded, 3),
+      (1, l10n.navTasks, Icons.check_circle_outline_rounded, 1),
+      (2, l10n.navTimer, Icons.timer_outlined, 2),
+      (3, l10n.navLinks, Icons.link_rounded, 4),
     ];
 
     return GridView.count(
@@ -229,45 +313,25 @@ class DashboardScreen extends StatelessWidget {
         const SizedBox(height: 10),
         Row(
           children: [
-            GesturefulAddLink(
-              tokens: tokens,
-              onTap: () => onNavigateTab(4), // Open links tab
+            GestureDetector(
+              onTap: () => onNavigateTab(4),
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: tokens.surface,
+                  borderRadius: BorderRadius.circular(tokens.radius),
+                  border: Border.all(
+                    color: tokens.line,
+                    width: tokens.borderWidth,
+                  ),
+                ),
+                child: Icon(Icons.add, color: tokens.inkMuted, size: 20),
+              ),
             ),
           ],
         ),
       ],
-    );
-  }
-}
-
-class GesturefulAddLink extends StatelessWidget {
-  final ThemeTokens tokens;
-  final VoidCallback onTap;
-
-  const GesturefulAddLink({
-    super.key,
-    required this.tokens,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: tokens.surface,
-          borderRadius: BorderRadius.circular(tokens.radius),
-          border: Border.all(
-            color: tokens.line,
-            width: tokens.borderWidth,
-            style: BorderStyle.solid,
-          ),
-        ),
-        child: Icon(Icons.add, color: tokens.inkMuted, size: 20),
-      ),
     );
   }
 }
