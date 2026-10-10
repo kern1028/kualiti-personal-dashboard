@@ -6,6 +6,7 @@ import '../../core/theme/theme_tokens.dart';
 import '../../core/db/user_provider.dart';
 import '../../core/utils/date_time_formatter.dart';
 import '../tasks/providers/task_provider.dart';
+import '../timer/providers/timer_provider.dart';
 import '../links/providers/link_provider.dart';
 import '../links/widgets/link_tile.dart';
 import '../links/widgets/link_form_sheet.dart';
@@ -83,15 +84,97 @@ class DashboardScreen extends StatelessWidget {
               _buildTodayTasksCard(context, tokens, l10n),
               const SizedBox(height: 14),
 
-              // 3. Four Menu Cards: Notes, Tasks, Timer, Links
+              // 3. Active Timer Card (Only shown if a timer or session is running)
+              _buildActiveTimerCard(context, tokens, l10n),
+
+              // 4. Four Menu Cards: Notes, Tasks, Timer, Links
               _buildMenuGrid(tokens, l10n),
               const SizedBox(height: 18),
 
-              // 4. Quick Links row (Up to 4 icons + Add button)
+              // 5. Quick Links row (Up to 4 icons + Add button)
               _buildQuickLinksRow(context, tokens, l10n),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildActiveTimerCard(
+    BuildContext context,
+    ThemeTokens tokens,
+    AppLocalizations l10n,
+  ) {
+    final timerProvider = Provider.of<TimerProvider>(context);
+
+    String timerTitle = '';
+    int remainingSec = 0;
+    bool isRunning = false;
+    VoidCallback? onTogglePause;
+
+    if (timerProvider.timers.any((t) => t.isRunning || t.isPaused)) {
+      final activeTimer = timerProvider.timers.firstWhere((t) => t.isRunning || t.isPaused);
+      timerTitle = activeTimer.name;
+      remainingSec = activeTimer.remainingSeconds;
+      isRunning = activeTimer.isRunning;
+      onTogglePause = () => timerProvider.togglePauseTimer(activeTimer.id);
+    } else if (timerProvider.activeSession != null &&
+        (timerProvider.activeSession!.isRunning || timerProvider.activeSession!.isPaused)) {
+      final s = timerProvider.activeSession!;
+      timerTitle = 'Sesi ${s.mode.toUpperCase()} (${s.phase == "focus" ? l10n.focus : l10n.rest})';
+      remainingSec = s.remainingSeconds;
+      isRunning = s.isRunning;
+      onTogglePause = () => timerProvider.togglePauseSession();
+    } else {
+      return const SizedBox.shrink(); // Hide card if no timer active
+    }
+
+    final m = (remainingSec / 60).floor().toString().padLeft(2, '0');
+    final s = (remainingSec % 60).toString().padLeft(2, '0');
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: tokens.surface,
+        borderRadius: BorderRadius.circular(tokens.radius),
+        border: Border.all(color: tokens.accent, width: 2),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.timer_outlined, color: tokens.accent, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.activeTimer,
+                  style: TextStyle(
+                    fontFamily: tokens.fontTitle,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: tokens.accent,
+                  ),
+                ),
+                Text(
+                  '$timerTitle - $m:$s',
+                  style: TextStyle(
+                    fontFamily: tokens.fontBody,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: tokens.ink,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: Icon(isRunning ? Icons.pause_circle_filled : Icons.play_circle_filled),
+            color: tokens.accent,
+            onPressed: onTogglePause,
+          ),
+        ],
       ),
     );
   }

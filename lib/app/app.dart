@@ -8,6 +8,7 @@ import '../features/splash/splash_screen.dart';
 import '../features/tasks/providers/task_provider.dart';
 import '../features/links/providers/link_provider.dart';
 import '../features/notes/providers/note_provider.dart';
+import '../features/timer/providers/timer_provider.dart';
 
 class KualitiApp extends StatelessWidget {
   const KualitiApp({super.key});
@@ -22,6 +23,7 @@ class KualitiApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => TaskProvider()),
         ChangeNotifierProvider(create: (_) => LinkProvider()),
         ChangeNotifierProvider(create: (_) => NoteProvider()),
+        ChangeNotifierProvider(create: (_) => TimerProvider()),
       ],
       child: Consumer2<ThemeProvider, LocaleProvider>(
         builder: (context, themeProvider, localeProvider, child) {
