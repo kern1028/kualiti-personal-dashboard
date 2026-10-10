@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'theme_tokens.dart';
 
@@ -71,7 +71,7 @@ class AppTheme {
           fontFamily: tokens.fontTitle,
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: tokens.surface,
         elevation: tokens.isPixel ? 0 : 0,
         margin: EdgeInsets.zero,
