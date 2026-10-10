@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -209,6 +209,10 @@ class AppLocalizations {
   String get themeVintage => translate('themeVintage');
   String get themeRetro => translate('themeRetro');
   String get themePixel => translate('themePixel');
+  String get notificationsTitle => translate('notificationsTitle');
+  String get notificationsDesc => translate('notificationsDesc');
+  String get allow => translate('allow');
+  String get later => translate('later');
 }
 
 class _AppLocalizationsDelegate

@@ -1,4 +1,3 @@
-﻿import 'package:intl/intl.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/utils/date_time_formatter.dart';
 

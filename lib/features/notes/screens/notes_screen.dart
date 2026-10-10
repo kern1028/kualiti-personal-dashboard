@@ -1,9 +1,7 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/theme/theme_tokens.dart';
-import '../models/note_model.dart';
 import '../providers/note_provider.dart';
 import '../widgets/note_editor_view.dart';
 import '../widgets/note_tile.dart';

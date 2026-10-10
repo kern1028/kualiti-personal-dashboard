@@ -1,4 +1,5 @@
-﻿import 'dart:io';
+import 'dart:io';
+import 'dart:isolate';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
 class TimerForegroundService {
@@ -17,7 +18,6 @@ class TimerForegroundService {
         channelDescription: 'Ongoing notification for active timers and sessions',
         channelImportance: NotificationChannelImportance.LOW,
         priority: NotificationPriority.LOW,
-        isSticky: true,
       ),
       iosNotificationOptions: const IOSNotificationOptions(),
       foregroundTaskOptions: const ForegroundTaskOptions(
@@ -75,13 +75,13 @@ void startCallback() {
 
 class TimerTaskHandler extends TaskHandler {
   @override
-  Future<void> onStart(DateTime timestamp, TaskStarter starter) async {}
+  void onStart(DateTime timestamp, SendPort? sendPort) {}
 
   @override
-  Future<void> onRepeatEvent(DateTime timestamp) async {}
+  void onRepeatEvent(DateTime timestamp, SendPort? sendPort) {}
 
   @override
-  Future<void> onDestroy(DateTime timestamp) async {}
+  void onDestroy(DateTime timestamp, SendPort? sendPort) {}
 
   @override
   void onNotificationButtonPressed(String id) {}
@@ -90,7 +90,5 @@ class TimerTaskHandler extends TaskHandler {
   void onNotificationPressed() {
     FlutterForegroundTask.launchApp();
   }
-
-  @override
-  void onNotificationDismissed() {}
 }
+

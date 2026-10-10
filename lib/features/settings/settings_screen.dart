@@ -1,4 +1,3 @@
-﻿import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -56,7 +55,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _handleExportBackup(BuildContext context, ThemeTokens tokens, AppLocalizations l10n) async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final provider = LocalFileBackupProvider();
-    final jsonContent = await provider.exportBackupData(userProvider.userName);
+    await provider.exportBackupData(userProvider.userName);
     final fileName = LocalFileBackupProvider.sanitizeFileName(userProvider.userName);
 
     if (!context.mounted) return;
